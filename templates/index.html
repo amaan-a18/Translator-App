@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>🌍 Translator</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flag-icons/6.7.0/css/flag-icons.min.css">
+
+  <style>
+    body {
+      margin: 0;
+      height: 100vh;
+      font-family: "Segoe UI", sans-serif;
+      display: flex;
+      flex-direction: column;
+      background-color: #0e1117;
+      color: #e6edf3;
+    }
+
+    /* ===== TOP HEADING ===== */
+    header {
+      text-align: center;
+      padding: 20px 0 10px;
+      color: #00ffc3;
+      font-size: 28px;
+      font-weight: bold;
+      text-shadow: 0 0 12px #00ffc3;
+      letter-spacing: 1px;
+    }
+
+    /* ===== MAIN CONTAINER ===== */
+    .container {
+      flex: 1;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      padding: 30px;
+      gap: 20px;
+    }
+
+    /* ===== LEFT & RIGHT SECTIONS ===== */
+    .panel {
+      flex: 1;
+      max-width: 500px;
+      min-width: 400px;
+      height: 450px;
+      background: linear-gradient(145deg, #0e1117, #10141b);
+      border-radius: 15px;
+      box-shadow: 0 0 20px rgba(87, 90, 88, 0.15);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 30px;
+      justify-content: flex-start;
+    }
+
+    .panel h2 {
+      color: #00ffc3;
+      margin-bottom: 15px;
+      font-size: 20px;
+      text-shadow: 0 0 8px #00ffc3;
+    }
+
+    /* ===== TEXT AREA ===== */
+    textarea {
+      width: 100%;
+      height: 150px;
+      resize: none;
+      padding: 14px;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      background-color: #161b22;
+      color: #fff;
+      outline: none;
+      box-shadow: inset 0 0 6px rgba(0, 255, 195, 0.25);
+    }
+
+    textarea::placeholder {
+      color: #777;
+    }
+
+    /* ===== SELECT DROPDOWN ===== */
+    select {
+      width: 100%;
+      margin-top: 15px;
+      padding: 12px;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      background-color: #161b22;
+      color: #fff;
+      outline: none;
+      box-shadow: inset 0 0 6px rgba(0, 255, 195, 0.25);
+      cursor: pointer;
+    }
+
+    label {
+      color: #aaa;
+      font-size: 14px;
+      margin-top: 10px;
+      align-self: flex-start;
+    }
+
+    /* ===== BUTTON ===== */
+    button {
+      margin-top: 20px;
+      padding: 12px 25px;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      cursor: pointer;
+      background-color: #00ffc3;
+      color: #0e1117;
+      font-weight: bold;
+      transition: 0.3s;
+      box-shadow: 0 0 10px #00ffc3;
+    }
+
+    button:hover {
+      background-color: #00e0ae;
+      box-shadow: 0 0 20px #00ffc3;
+    }
+
+    /* ===== OUTPUT BOX ===== */
+    .output-box {
+      width: 100%;
+      height: 230px;
+      background-color: #161b22;
+      border-radius: 10px;
+      padding: 20px;
+      color: #00ffc3;
+      font-size: 16px;
+      box-shadow: 0 0 15px rgba(0,255,204,0.25);
+      overflow-y: auto;
+      white-space: pre-wrap;
+    }
+
+    .detected {
+      margin-top: 10px;
+      font-size: 14px;
+      color: #aaa;
+    }
+
+    .loader {
+      display: none;
+      margin-top: 10px;
+      color: #00ffc3;
+      font-size: 13px;
+    }
+
+    .typing {
+      border-right: 2px solid #00ffc3;
+      animation: blink 0.7s infinite;
+    }
+
+    @keyframes blink {
+      50% { border-color: transparent; }
+    }
+
+    @media (max-width: 950px) {
+      .container {
+        flex-direction: column;
+        height: auto;
+      }
+      .panel {
+        width: 90%;
+        max-width: none;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <header>🌍 TRANSLATOR </header>
+
+  <div class="container">
+    <!-- LEFT PANEL -->
+    <div class="panel left">
+      <h2>From</h2>
+      <textarea id="text-input" placeholder="Enter text here..."></textarea>
+
+      <label for="language-select">Select language to translate to:</label>
+      <select id="language-select">
+        {% for code, name in languages.items() %}
+        <option value="{{ code }}" {% if code == 'en' %}selected{% endif %}>
+          {{ name.title() }}
+        </option>
+        {% endfor %}
+      </select>
+
+      <button onclick="translateText()">Translate</button>
+      <div class="loader" id="loader">Translating...</div>
+    </div>
+
+    <!-- RIGHT PANEL -->
+    <div class="panel right">
+      <h2>To</h2>
+      <div class="output-box" id="output"></div>
+      <div class="detected" id="detected"></div>
+    </div>
+  </div>
+
+  <script>
+    const textInput = document.getElementById("text-input");
+    const languageSelect = document.getElementById("language-select");
+    const outputDiv = document.getElementById("output");
+    const detectedDiv = document.getElementById("detected");
+    const loader = document.getElementById("loader");
+
+    async function translateText() {
+      const text = textInput.value.trim();
+      const language = languageSelect.value;
+
+      if (!text) {
+        outputDiv.textContent = "";
+        detectedDiv.textContent = "";
+        loader.style.display = "none";
+        return;
+      }
+
+      loader.style.display = "block";
+      outputDiv.textContent = "";
+
+      const response = await fetch("/translate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, language })
+      });
+
+      const data = await response.json();
+      loader.style.display = "none";
+
+      typeText(data.translated || "");
+      detectedDiv.textContent = data.detected ? "Detected Language: " + data.detected : "";
+    }
+
+    function typeText(text) {
+      outputDiv.textContent = "";
+      outputDiv.classList.add("typing");
+      let i = 0;
+      const speed = 30;
+
+      const interval = setInterval(() => {
+        outputDiv.textContent = text.slice(0, i);
+        i++;
+        if (i > text.length) {
+          clearInterval(interval);
+          outputDiv.classList.remove("typing");
+        }
+      }, speed);
+    }
+  </script>
+</body>
+</html>
